@@ -10,6 +10,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
+    private var alertPresenter: AlertPresenterProtocol?
 
     @IBOutlet private var counterLabel: UILabel!
     @IBOutlet private var imageView: UIImageView!
@@ -39,23 +40,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
 
     private func show(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
         
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            
+        //создаём модель с данными прошедшой игры
+        let model = AlertModel(title: result.title, message: result.text, buttonText: result.buttonText){[weak self] in
+            guard let self = self else {return}
+
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
-            
+
+            // заново показываем первый вопрос
             self.questionFactory?.requestNextQuestion()
         }
         
-        alert.addAction(action)
-        
-        present(alert, animated: true, completion: nil)
+        alertPresenter?.show(model: model)
     }
     
     private func showAnswerResult(isCorrect: Bool) {
@@ -102,7 +99,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         imageView.layer.cornerRadius = 20
+        // делегируем создание вопросов классу QuestionFactory
         questionFactory = QuestionFactory(delegate: self)
+
+        // делегируем показ алерта классу AlertPresenter
+        alertPresenter = AlertPresenter(delegate: self)
+        
         questionFactory?.requestNextQuestion()
     }
     
