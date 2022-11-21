@@ -11,6 +11,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenterProtocol?
+    private var statisticService: StatisticService?
 
     @IBOutlet private var counterLabel: UILabel!
     @IBOutlet private var imageView: UIImageView!
@@ -34,15 +35,28 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func show(quiz step: QuizStepViewModel) {
+        imageView.layer.borderWidth = 0
         imageView.image = step.image
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
     }
 
     private func show(quiz result: QuizResultsViewModel) {
+        var finalMessage = result.text //итоговый текст алерта
+        
+        //добавлением статистику
+        if let statisticService = statisticService {
+            let count = "Количество сыгранных квизов: \(statisticService.gamesCount)"
+            
+            let record = "Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date))"
+            
+            let accuracy = "Средняя точность \(String(format: "%.2f", statisticService.totalAccuracy * 100))%"
+            
+            finalMessage += "\n" + count + "\n" + record + "\n" + accuracy
+        }
         
         //создаём модель с данными прошедшой игры
-        let model = AlertModel(title: result.title, message: result.text, buttonText: result.buttonText){[weak self] in
+        let model = AlertModel(title: result.title, message: finalMessage, buttonText: result.buttonText){[weak self] in
             guard let self = self else {return}
 
             self.currentQuestionIndex = 0
@@ -64,7 +78,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.borderWidth = 8
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
         
+        
         imageView.layer.cornerRadius = 20
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
             self.showNextQuestionOrResults()
@@ -76,14 +92,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private func showNextQuestionOrResults() {
       if currentQuestionIndex == questionsAmount - 1 {
           // - 1 потому что индекс начинается с 0, а длинна массива — с 1
-          let text = "Ваш результат: \(correctAnswers) из 10"
+          let text = "Ваш результат: \(correctAnswers) из \(questionsAmount)"
           let viewModel = QuizResultsViewModel(title: "Этот раунд окончен",
                                                text: text,
                                                buttonText: "Сыграть еще раз")
-          correctAnswers = 0
+          statisticService?.store(correct: correctAnswers, total: questionsAmount) //сохраняем статистику
           show(quiz: viewModel)
       } else {
-        currentQuestionIndex += 1 // увеличиваем индекс текущего урока на 1; таким образом мы сможем получить следующий урок
+          currentQuestionIndex += 1 // увеличиваем индекс текущего урока на 1; таким образом мы сможем получить следующий урок
           questionFactory?.requestNextQuestion()
       }
     }
@@ -98,7 +114,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        statisticService = StatisticServiceImplementation()
+        
         imageView.layer.cornerRadius = 20
+    
         // делегируем создание вопросов классу QuestionFactory
         questionFactory = QuestionFactory(delegate: self)
 
