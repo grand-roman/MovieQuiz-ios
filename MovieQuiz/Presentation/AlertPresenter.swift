@@ -20,8 +20,6 @@ struct AlertPresenter: AlertPresenterProtocol{
 
         alert.addAction(action)
 
-        guard let delegate = delegate else {return}
-
-        delegate.present(alert, animated: true, completion: nil)
+        delegate?.present(alert, animated: true, completion: nil)
     }
 }

@@ -5,6 +5,9 @@ final class StatisticServiceImplementation: StatisticService {
 
     private let userDefaults = UserDefaults.standard
     
+    private var correct: Int { userDefaults.integer(forKey: Keys.correct.rawValue) }
+    private var total: Int { userDefaults.integer(forKey: Keys.total.rawValue) }
+    
     private enum Keys: String {
         case correct, total, bestGame, gamesCount
     }
@@ -54,11 +57,11 @@ final class StatisticServiceImplementation: StatisticService {
             bestGame = newGame
         }
         
-        var corrects = userDefaults.integer(forKey: Keys.correct.rawValue)
+        var corrects = correct
         corrects += count
         userDefaults.set(corrects, forKey: Keys.correct.rawValue)
         
-        var totals = userDefaults.integer(forKey: Keys.total.rawValue)
+        var totals = total
         totals += amount
         userDefaults.set(totals, forKey: Keys.total.rawValue)
     }
