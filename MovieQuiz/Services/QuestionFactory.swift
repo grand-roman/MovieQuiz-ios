@@ -2,9 +2,12 @@ import Foundation
 
 
 class QuestionFactory: QuestionFactoryProtocol {
-
+    private let moviesLoader: MoviesLoading?
     private weak var delegate: QuestionFactoryDelegate?
     
+    private var movies: [MostPopularMovie] = []
+    
+    /*
     private let questions: [QuizQuestion] = [
             QuizQuestion(
                 image: "The Godfather",
@@ -47,18 +50,82 @@ class QuestionFactory: QuestionFactoryProtocol {
                 text: "Рейтинг этого фильма больше чем 6?",
                 correctAnswer: false)
     ]
-    
-    init(delegate: QuestionFactoryDelegate?) {
+    */
+    init(delegate: QuestionFactoryDelegate?, moviesLoader: MoviesLoading) {
         self.delegate = delegate
+        self.moviesLoader = moviesLoader
     }
     
-    func requestNextQuestion() {
-        guard let index = (0..<questions.count).randomElement() else {
-            delegate?.didReceiveNextQuestion(question: nil)
-            return
+    func loadData() {
+        moviesLoader?.loadMovies { result in
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                switch result {
+                case .success(let mostPopularMovies):
+                    self.movies = mostPopularMovies.items// сохраняем фильм в нашу новую переменную
+                    self.delegate?.didLoadDataFromServer()// сообщаем, что данные загрузились
+                case .failure(let error):
+                    self.delegate?.didFailToLoadData(with: error)// сообщаем об ошибке нашему
+                }
+            }
         }
-        
-        let question = questions[safe: index]
-        delegate?.didReceiveNextQuestion(question: question)
+    }
+    
+    
+    func requestNextQuestion() {
+        DispatchQueue.global().async { [weak self] in
+            guard let self = self else { return }
+            let index = (0..<self.movies.count).randomElement() ?? 0
+            
+            guard let movie = self.movies[safe: index] else { return }
+            
+            var imageData = Data()
+           
+            do {
+                imageData = try Data(contentsOf: movie.resizedImageURL)
+            } catch {
+                print("Failed to load image")
+                //возвращаемся в главный поток, сетевые данные не удалось получить, работа с ними окончена
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.delegate?.didFailToLoadImage()
+                }
+            }
+            
+            let rating = Float(movie.rating) ?? 0
+            
+            
+            let (text, correctAnswer) = self.generateTextAnswer(rating: rating)
+            
+            let question = QuizQuestion(image: imageData,
+                                         text: text,
+                                         correctAnswer: correctAnswer)
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.didReceiveNextQuestion(question: question)
+            }
+        }
+    }
+    
+    private func generateTextAnswer(rating: Float) -> (text: String, correctAnswer: Bool){
+        let number = Int.random(in: 1..<10)
+        let word = ["больше", "меньше"].randomElement()
+        let text: String
+        if let word = ["больше", "меньше"].randomElement() {
+            text = "Рейтинг этого фильма \(word) чем \(number)?"
+        }
+        else {
+            text = "Рейтинг этого фильма меньше чем \(number)?"
+        }
+        var correctAnswer: Bool
+        if word == "больше"{
+            correctAnswer = rating > Float(number)
+        }
+        else {
+            correctAnswer = rating < Float(number)
+        }
+        return (text, correctAnswer)
+
     }
 }
