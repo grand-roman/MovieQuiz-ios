@@ -87,7 +87,7 @@ class QuestionFactory: QuestionFactoryProtocol {
                 print("Failed to load image")
                 //возвращаемся в главный поток, сетевые данные не удалось получить, работа с ними окончена
                 DispatchQueue.main.async { [weak self] in
-                    guard let self = else { return }
+                    guard let self else { return }
                     self.delegate?.didFailToLoadImage()
                 }
             }
