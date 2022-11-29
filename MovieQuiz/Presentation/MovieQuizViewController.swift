@@ -13,12 +13,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var alertPresenter: AlertPresenterProtocol?
     private var statisticService: StatisticService?
 
-    @IBOutlet private var counterLabel: UILabel!
-    @IBOutlet private var imageView: UIImageView!
-    @IBOutlet private var textLabel: UILabel!
-    @IBOutlet private var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet private weak var counterLabel: UILabel!
+    @IBOutlet private weak var imageView: UIImageView!
+    @IBOutlet private weak var textLabel: UILabel!
+    @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet private weak var yesButton: UIButton!
+    @IBOutlet private weak var noButton: UIButton!
     
-
     @IBAction private func noButtonClicked(_ sender: UIButton) {
         guard let currentQuestion = currentQuestion else {
             return
@@ -40,13 +41,29 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         activityIndicator.startAnimating() // включаем анимацию
     }
     
+    private func showButton() {
+        // делаем кнопки доступными
+        self.yesButton.isEnabled = true
+        self.noButton.isEnabled = true
+        self.yesButton.tintColor = UIColor.ypBlack
+        self.noButton.tintColor = UIColor.ypBlack
+    }
+    
+    private func stopShowButton() {
+        //делаем кнопки недоступными
+        self.yesButton.isEnabled = false
+        self.noButton.isEnabled = false
+        self.yesButton.tintColor = UIColor.ypGray
+        self.noButton.tintColor = UIColor.ypGray
+    }
+    
     private func showNetworkError(message: String) {
-        activityIndicator.isHidden = true
+        activityIndicator.stopAnimating()
         
         let model = AlertModel(title: "Ошибка",
                                message: message,
                                buttonText: "Попробовать еще раз") { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             // показываем индикатор
             self.showLoadingIndicator()
             // начинаем загрузку данных заново
@@ -79,7 +96,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         //создаём модель с данными прошедшой игры
         let model = AlertModel(title: result.title, message: finalMessage, buttonText: result.buttonText){[weak self] in
-            guard let self = self else {return}
+            guard let self else {return}
 
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
@@ -100,11 +117,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.borderWidth = 8
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
         
+        stopShowButton()
+        
         
         imageView.layer.cornerRadius = 20
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.showNextQuestionOrResults()
             self.imageView.layer.borderColor = UIColor.clear.cgColor
         }
@@ -122,6 +141,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
           show(quiz: viewModel)
       } else {
           currentQuestionIndex += 1 // увеличиваем индекс текущего урока на 1; таким образом мы сможем получить следующий урок
+          showLoadingIndicator() // показываем индикатор загрузки поскольку картинки грузятся
           questionFactory?.requestNextQuestion()
       }
     }
@@ -144,6 +164,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         statisticService = StatisticServiceImplementation()
         // делегируем показ алерта классу AlertPresenter
         alertPresenter = AlertPresenter(delegate: self)
+        
+        self.activityIndicator.hidesWhenStopped = true
+        
+        // делаем кнопки недоступными, поскольку в начале данные загружаются
+        stopShowButton()
+        
        
         questionFactory?.loadData()
         showLoadingIndicator()
@@ -159,14 +185,15 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         currentQuestion = question
         let viewModel = convert(model: question)
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else {return}
-            self.activityIndicator.isHidden = true // скрываем индикатор загрузки
+            guard let self else {return}
+            self.activityIndicator.stopAnimating() // скрываем индикатор загрузки
+            
+            self.showButton()
             self.show(quiz: viewModel) // показываем вопрос
         }
     }
     
     func didLoadDataFromServer() {
-        activityIndicator.isHidden = true // скрываем индикатор загрузки
         questionFactory?.requestNextQuestion()
     }
 

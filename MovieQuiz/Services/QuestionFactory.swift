@@ -59,7 +59,7 @@ class QuestionFactory: QuestionFactoryProtocol {
     func loadData() {
         moviesLoader?.loadMovies { [weak self] result in
             DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
+                guard let self else { return }
                 switch result {
                 case .success(let mostPopularMovies):
                     self.movies = mostPopularMovies.items// сохраняем фильм в нашу новую переменную
@@ -74,7 +74,7 @@ class QuestionFactory: QuestionFactoryProtocol {
     
     func requestNextQuestion() {
         DispatchQueue.global().async { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             let index = (0..<self.movies.count).randomElement() ?? 0
             
             guard let movie = self.movies[safe: index] else { return }
@@ -83,6 +83,21 @@ class QuestionFactory: QuestionFactoryProtocol {
            
             do {
                 imageData = try Data(contentsOf: movie.resizedImageURL)
+            
+                let rating = Float(movie.rating) ?? 0
+                
+                
+                let (text, correctAnswer) = self.generateTextAnswer(rating: rating)
+                
+                let question = QuizQuestion(image: imageData,
+                                             text: text,
+                                             correctAnswer: correctAnswer)
+                
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.didReceiveNextQuestion(question: question)
+                }
+
             } catch {
                 print("Failed to load image")
                 //возвращаемся в главный поток, сетевые данные не удалось получить, работа с ними окончена
@@ -91,20 +106,6 @@ class QuestionFactory: QuestionFactoryProtocol {
                     self.delegate?.didFailToLoadImage()
                 }
             }
-            
-            let rating = Float(movie.rating) ?? 0
-            
-            
-            let (text, correctAnswer) = self.generateTextAnswer(rating: rating)
-            
-            let question = QuizQuestion(image: imageData,
-                                         text: text,
-                                         correctAnswer: correctAnswer)
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.delegate?.didReceiveNextQuestion(question: question)
-            }
         }
     }
     
@@ -112,7 +113,7 @@ class QuestionFactory: QuestionFactoryProtocol {
         let number = Int.random(in: 1..<10)
         let word = ["больше", "меньше"].randomElement()
         let text: String
-        if let word = ["больше", "меньше"].randomElement() {
+        if let word = word {
             text = "Рейтинг этого фильма \(word) чем \(number)?"
         }
         else {
