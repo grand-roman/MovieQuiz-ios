@@ -57,7 +57,7 @@ class QuestionFactory: QuestionFactoryProtocol {
     }
     
     func loadData() {
-        moviesLoader?.loadMovies { result in
+        moviesLoader?.loadMovies { [weak self] result in
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 switch result {
@@ -87,7 +87,7 @@ class QuestionFactory: QuestionFactoryProtocol {
                 print("Failed to load image")
                 //возвращаемся в главный поток, сетевые данные не удалось получить, работа с ними окончена
                 DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
+                    guard let self = else { return }
                     self.delegate?.didFailToLoadImage()
                 }
             }
@@ -108,7 +108,7 @@ class QuestionFactory: QuestionFactoryProtocol {
         }
     }
     
-    private func generateTextAnswer(rating: Float) -> (text: String, correctAnswer: Bool){
+    private func generateTextAnswer(rating: Float) -> (text: String, correctAnswer: Bool) {
         let number = Int.random(in: 1..<10)
         let word = ["больше", "меньше"].randomElement()
         let text: String

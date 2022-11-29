@@ -176,6 +176,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     func didFailToLoadImage() {
         showNetworkError(message: "Не удаётся загрузить картинку")
-      }
+    }
 
 }

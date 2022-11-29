@@ -37,7 +37,7 @@ struct MoviesLoader: MoviesLoading {
                     let mostPopularMovies = try JSONDecoder().decode(MostPopularMovies.self, from: data)
                     
                     // декодировали, но данные пустые, тогда ошибка
-                    if mostPopularMovies.items.isEmpty{
+                    if mostPopularMovies.items.isEmpty {
                         handler(.failure(loadingMovieError.loadError))
                         return
                     }
