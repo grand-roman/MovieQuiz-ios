@@ -113,7 +113,7 @@ class QuestionFactory: QuestionFactoryProtocol {
         let number = Int.random(in: 1..<10)
         let word = ["больше", "меньше"].randomElement()
         let text: String
-        if let word = word {
+        if let word {
             text = "Рейтинг этого фильма \(word) чем \(number)?"
         }
         else {

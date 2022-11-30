@@ -28,26 +28,26 @@ struct MoviesLoader: MoviesLoading {
         
         networkClient.fetch(url: mostPopularMoviesUrl){ result in // функция которая принимает ответ сетевого запроса (ошибка или дата)
             
-            switch result{
-            case .failure(let error):   // если приходит ошибка, то передаём её дальше
-                handler(.failure(error))
-                
-            case .success(let data):    // приходят данные
-                do {    // пытаемся их декодировать
-                    let mostPopularMovies = try JSONDecoder().decode(MostPopularMovies.self, from: data)
+            switch result {
+                case .failure(let error):   // если приходит ошибка, то передаём её дальше
+                    handler(.failure(error))
                     
-                    // декодировали, но данные пустые, тогда ошибка
-                    if mostPopularMovies.items.isEmpty {
+                case .success(let data):    // приходят данные
+                    do {    // пытаемся их декодировать
+                        let mostPopularMovies = try JSONDecoder().decode(MostPopularMovies.self, from: data)
+                        
+                        // декодировали, но данные пустые, тогда ошибка
+                        if mostPopularMovies.items.isEmpty {
+                            handler(.failure(loadingMovieError.loadError))
+                            return
+                        }
+                        
+                        // всё хорошо, передаём данные
+                        handler(.success(mostPopularMovies))
+                        
+                    } catch {// если не получилось, то передаём дальше ошибку ошибку
                         handler(.failure(loadingMovieError.loadError))
-                        return
                     }
-                    
-                    // всё хорошо, передаём данные
-                    handler(.success(mostPopularMovies))
-                    
-                } catch {// если не получилось, то передаём дальше ошибку ошибку
-                    handler(.failure(loadingMovieError.loadError))
-                }
             }
         }
     }
