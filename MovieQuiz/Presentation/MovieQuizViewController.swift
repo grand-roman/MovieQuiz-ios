@@ -44,8 +44,6 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
         alertPresenter?.show(model: errorAlertModel)
     }
     
-    // MARK: - functions
-    
     private func getAppColor(_ name: String) -> CGColor {
         if let color = UIColor(named: name) {
             return color.cgColor
