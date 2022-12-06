@@ -4,10 +4,10 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
-    private var currentQuestionIndex: Int = 0
     private var correctAnswers: Int = 0
     
-    private let questionsAmount: Int = 10
+    private let presenter = MovieQuizPresenter()
+    
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenterProtocol?
@@ -65,6 +65,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             guard let self else { return }
             // показываем индикатор
             self.showLoadingIndicator()
+            
+            self.presenter.resetQuestionIndex()
+            self.correctAnswers = 0
+
             // начинаем загрузку данных заново
             self.questionFactory?.loadData()
         }
@@ -93,12 +97,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             finalMessage += "\n" + count + "\n" + record + "\n" + accuracy
         }
         
+        
         //создаём модель с данными прошедшой игры
         let model = AlertModel(title: result.title, message: finalMessage, buttonText: result.buttonText){[weak self] in
             guard let self else {return}
 
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
+            self.presenter.resetQuestionIndex()
 
             // заново показываем первый вопрос
             self.questionFactory?.requestNextQuestion()
@@ -130,27 +134,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showNextQuestionOrResults() {
-      if currentQuestionIndex == questionsAmount - 1 {
-          // - 1 потому что индекс начинается с 0, а длинна массива — с 1
-          let text = "Ваш результат: \(correctAnswers) из \(questionsAmount)"
-          let viewModel = QuizResultsViewModel(title: "Этот раунд окончен",
-                                               text: text,
+        if presenter.isLastQuestion() {
+            let currentGameResultLine = "Ваш результат: \(correctAnswers)\\\(presenter.questionsAmount)"
+            let viewModel = QuizResultsViewModel(title: "Этот раунд окончен",
+                                               text: currentGameResultLine,
                                                buttonText: "Сыграть еще раз")
-          statisticService?.store(correct: correctAnswers, total: questionsAmount) //сохраняем статистику
-          show(quiz: viewModel)
-      } else {
-          currentQuestionIndex += 1 // увеличиваем индекс текущего урока на 1; таким образом мы сможем получить следующий урок
-          showLoadingIndicator() // показываем индикатор загрузки поскольку картинки грузятся
-          questionFactory?.requestNextQuestion()
-      }
-    }
-    
-    
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-            image: UIImage(data: model.image) ?? UIImage(),
-            question: model.text,
-            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")// высчитываем номер вопроса
+            statisticService?.store(correct: correctAnswers, total: presenter.questionsAmount) //сохраняем статистику
+            show(quiz: viewModel)
+            
+        } else {
+            presenter.switchToNextQuestion() // увеличиваем индекс текущего урока на 1; таким образом мы сможем получить следующий урок
+            showLoadingIndicator() // показываем индикатор загрузки поскольку картинки грузятся
+            questionFactory?.requestNextQuestion()
+            
+        }
+        
     }
 
     
@@ -182,7 +180,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
         
         currentQuestion = question
-        let viewModel = convert(model: question)
+        let viewModel = presenter.convert(model: question)
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.activityIndicator.stopAnimating() // скрываем индикатор загрузки
